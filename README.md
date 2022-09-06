@@ -26,5 +26,5 @@ Run the binary file. This will start the API.
 
 This API is build using [Echo](https://echo.labstack.com/). 
 
-The database is managed using [go-pg](github.com/go-pg/pg/v10) (this will be changed in the future).
+The database is managed using [go-pg](https://github.com/go-pg/pg) (this will be changed in the future).
 
