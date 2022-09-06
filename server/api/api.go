@@ -75,8 +75,6 @@ func NewApi(cfg *Config) {
 	g := e.Group("/api")
 
 	g.POST("/scrapeInstagram", a.scrapeInstagram)
-	g.POST("/saveUrlSelection", a.saveUrlSelection, TokenMiddleware)
-	g.POST("/logout", a.logout, TokenMiddleware)
 	g.POST("/scrapeBuilder", a.scrapeBuilder)
 	g.POST("/verified", a.verified)
 	g.POST("/updateScrape", a.updateScrape)
