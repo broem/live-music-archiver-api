@@ -95,11 +95,13 @@ func (a *Api) myScrapes(c echo.Context) error {
 
 	events, err := a.r.GetEventsByID(id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	err = createEventsCSV(events)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -109,18 +111,21 @@ func (a *Api) myScrapes(c echo.Context) error {
 func (a *Api) deleteScrape(c echo.Context) error {
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
 	// delete runner
 	err := a.r.DeleteRunner(p.UserID, p.MapID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	// delete the map
 	err = a.r.DeleteEventMapper(p.MapID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -130,6 +135,7 @@ func (a *Api) deleteScrape(c echo.Context) error {
 func (a *Api) updateScrape(c echo.Context) error {
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
@@ -144,6 +150,7 @@ func (a *Api) updateScrape(c echo.Context) error {
 	// update runner
 	err := a.r.UpsertRunner(runner)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -177,6 +184,7 @@ func (a *Api) ScrapeByID(c echo.Context) error {
 	id := c.Param("id")
 	event, err := a.r.GetEventMapperByID(id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -206,6 +214,7 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 
 	runners, err := a.r.GetIgRunnersByUserID(id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 	
@@ -218,6 +227,7 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 	// get enabled maps
 	maps, err := a.r.GetIGEventMappersByMapID(mapIDs)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -247,6 +257,7 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 func (a *Api) updateIGScrape(c echo.Context) error {
 	p := new(CurrentIGRunners)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
@@ -261,6 +272,7 @@ func (a *Api) updateIGScrape(c echo.Context) error {
 	// update runner
 	err := a.r.UpsertIgRunner(runner)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -270,18 +282,21 @@ func (a *Api) updateIGScrape(c echo.Context) error {
 func (a *Api) deleteIGScrape(c echo.Context) error {
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
 	// delete runner
 	err := a.r.DeleteIgRunner(p.UserID, p.MapID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	// delete the map
 	err = a.r.DeleteIgMapper(p.MapID)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -336,6 +351,7 @@ func (a *Api) getCurrentScrapeEvents(c echo.Context) error {
 func (a *Api) scrapeBuilder(c echo.Context) error {
 	p := new(repo.ScrapeBuilder)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -348,11 +364,13 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 
 	err := a.r.AddUser(user)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	err = a.r.SaveScrapeBuilder(p)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -386,6 +404,7 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 	// save mapper to db
 	err = a.r.SaveEventMapper(m)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -398,17 +417,20 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 	}
 	err = a.r.UpsertRunner(runner)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
 	// scrape the first event found
 	events := a.sc.ScrapeEvent(m)
 	if len(events) == 0 {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
 	err = a.r.SaveEvents(events)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -471,6 +493,7 @@ func unmapFrequency(frequency int) string {
 func (a *Api) scrapeInstagram(c echo.Context) error {
 	s := new(repo.IgMapBuilder)
 	if err := c.Bind(s); err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -484,6 +507,7 @@ func (a *Api) scrapeInstagram(c echo.Context) error {
 
 	err := a.r.SaveIgMapper(m)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -498,6 +522,7 @@ func (a *Api) scrapeInstagram(c echo.Context) error {
 	// save runner
 	err = a.r.UpsertIgRunner(runner)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -507,6 +532,7 @@ func (a *Api) scrapeInstagram(c echo.Context) error {
 func (a *Api) saveUrlSelection(c echo.Context) error {
 	p := new(repo.Message)
 	if err := c.Bind(p); err != nil {
+		fmt.Println(err)
 		return err
 	}
 	log.Println(p)

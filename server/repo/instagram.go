@@ -15,7 +15,7 @@ type IgMapBuilder struct {
 
 type IgMapper struct {
 	tableName  struct{}  `pg:"ig_mappers"`
-	MapID      uuid.UUID `json:"map_id"`
+	MapID      uuid.UUID `json:"map_id" pg:"map_id,pk"`
 	UserID     string    `json:"user_id"`
 	UserEmail  string    `json:"user_email"`
 	IgUserName string    `json:"ig_user_name"`
@@ -24,8 +24,8 @@ type IgMapper struct {
 
 type IgRunner struct {
 	tableName struct{}  `pg:"ig_runners"`
-	MapID     uuid.UUID `json:"map_id"`
-	UserID    string    `json:"user_id"`
+	MapID     uuid.UUID `json:"map_id" pg:"map_id,pk"`
+	UserID    string    `json:"user_id" pg:"user_id,pk"`
 	Chron     int       `json:"chron"`
 	LastRun   time.Time `json:"last_run"`
 	Enabled   bool      `json:"enabled"`

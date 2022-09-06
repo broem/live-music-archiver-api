@@ -9,7 +9,7 @@ import (
 type Event struct {
 	tableName        struct{}  `pg:"captured"`
 	UserID           string    `json:"user_id"`
-	ID               string    `json:"eventID" pg:"captured_id"`
+	ID               string    `json:"eventID" pg:"captured_id,pk"`
 	Title            string    `json:"eventTitle"`
 	DescriptionURL   string    `json:"eventDescURL"`
 	Description      string    `json:"eventDesc"`
@@ -56,7 +56,7 @@ type EventWithCount struct {
 
 type EventMapper struct {
 	tableName                struct{}  `pg:"mappers"`
-	MapID                    uuid.UUID `json:"map_id"`
+	MapID                    uuid.UUID `json:"map_id" pg:"map_id,pk"`
 	VenueBaseURL             string    `json:"venue_base_url"`
 	FullEventSelector        string    `json:"full_event"`
 	UserID                   string    `json:"user_id"`
