@@ -43,6 +43,9 @@ CREATE TABLE "event".captured (
 	captured_id uuid NOT NULL,
 	url varchar NULL,
 	capture_date timestamptz NULL,
+	cbsa varchar NULL,
+	state_fips varchar NULL,
+	county_fips varchar NULL,
 	CONSTRAINT captured_pk PRIMARY KEY (captured_id)
 );
 -- "event".mappers definition
