@@ -7,10 +7,9 @@ import (
 )
 
 type User struct {
-	tableName   struct{}  `pg:"users"`
-	UserID      string    `json:"user_id,omitempty" pg:"user_id,pk"`
-	Email       string    `json:"email,omitempty"`
-	InstallDate time.Time `json:"install_date,omitempty"`
+	UserID      string    `json:"user_id"`
+	Email       string    `json:"email"`
+	InstallDate time.Time `json:"install_date"`
 }
 
 type Token struct {

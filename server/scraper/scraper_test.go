@@ -18,7 +18,7 @@ func TestCamelScraper(t *testing.T) {
 		VenueBaseURL:      "https://thecamel.org/events/",
 		DescriptionURLSelector: "div.col-12.mt-2.text-center.eventMoreInfo",
 		DescriptionSelector: "div.col-sm-12.px-0.singleEventDescription.emptyDesc",
-	})
+	}, false)
 
 	if len(evts) == 0 {
 		t.Errorf("Expected at least 1 event, got 0")

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -57,7 +56,13 @@ func NewApi(cfg *Config) {
 		},
 	)
 	if err != nil {
-		log.Fatal(err)
+		panic("no repo response")
+	}
+
+	// create database tables
+	err = repo.CreateTables()
+	if err != nil {
+		panic("no repo response")
 	}
 
 	a := Api{
@@ -75,6 +80,8 @@ func NewApi(cfg *Config) {
 	g := e.Group("/api")
 
 	g.POST("/scrapeInstagram", a.scrapeInstagram)
+	g.POST("/saveUrlSelection", a.saveUrlSelection, TokenMiddleware)
+	g.POST("/logout", a.logout, TokenMiddleware)
 	g.POST("/scrapeBuilder", a.scrapeBuilder)
 	g.POST("/verified", a.verified)
 	g.POST("/updateScrape", a.updateScrape)
@@ -83,6 +90,7 @@ func NewApi(cfg *Config) {
 	g.POST("/deleteIGScrape", a.deleteIGScrape)
 	g.GET("/scrapeID/:id", a.ScrapeByID)
 	g.GET("/myScrapes/:id", a.myScrapes)
+	g.GET("/myIgScrapes/:id", a.myIgScrapes)
 	g.GET("/getCurrentScrapeEvents/:id", a.getCurrentScrapeEvents)
 	g.GET("/getCurrentIGScrapeEvents/:id", a.getCurrentIGScrapeEvents)
 
@@ -95,20 +103,36 @@ func (a *Api) myScrapes(c echo.Context) error {
 
 	events, err := a.r.GetEventsByID(id)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	err = createEventsCSV(events)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	return c.File("events.csv")
 }
 
+// myIgScrapes returns all the scrapes for a user
+func (a *Api) myIgScrapes(c echo.Context) error {
+	id := c.Param("id")
+
+	events, err := a.r.GetIgCapturedByUserID(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	err = createIGEventsTXT(events)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	return c.File("igRawText.txt")
+}
+
 func (a *Api) deleteScrape(c echo.Context) error {
+	fmt.Println("deleteScrape")
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
 		fmt.Println(err)
@@ -135,7 +159,6 @@ func (a *Api) deleteScrape(c echo.Context) error {
 func (a *Api) updateScrape(c echo.Context) error {
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
@@ -150,7 +173,6 @@ func (a *Api) updateScrape(c echo.Context) error {
 	// update runner
 	err := a.r.UpsertRunner(runner)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -179,16 +201,35 @@ func createEventsCSV(events []*repo.Event) error {
 	return nil
 }
 
+// createIGEventsTXT creates a txt file with all the scraped IG data
+func createIGEventsTXT(events []*repo.IgCaptured) error {
+	f, err := os.Create("igRawText.txt")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for _, event := range events {
+		// event to txt string
+		mslice := event.CapturedString()
+		_, err = f.WriteString(mslice)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ScrapeByID scrapes an event by id
 func (a *Api) ScrapeByID(c echo.Context) error {
 	id := c.Param("id")
 	event, err := a.r.GetEventMapperByID(id)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
-	events := a.sc.ScrapeEvent(event)
+	events := a.sc.ScrapeEvent(event, false)
 
 	return c.JSON(http.StatusOK, events)
 }
@@ -214,10 +255,9 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 
 	runners, err := a.r.GetIgRunnersByUserID(id)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
-	
+
 	// get all map id from runners
 	var mapIDs []string
 	for _, r := range runners {
@@ -227,7 +267,6 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 	// get enabled maps
 	maps, err := a.r.GetIGEventMappersByMapID(mapIDs)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -244,7 +283,7 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 
 		currentRunners = append(currentRunners, CurrentIGRunners{
 			MapID:     m.MapID.String(),
-			Profile:       m.IgUserName,
+			Profile:   m.IgUserName,
 			Frequency: unmapFrequency(r.Chron),
 			Enabled:   r.Enabled,
 			UserID:    r.UserID,
@@ -257,7 +296,6 @@ func (a *Api) getCurrentIGScrapeEvents(c echo.Context) error {
 func (a *Api) updateIGScrape(c echo.Context) error {
 	p := new(CurrentIGRunners)
 	if err := c.Bind(p); err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
@@ -272,7 +310,6 @@ func (a *Api) updateIGScrape(c echo.Context) error {
 	// update runner
 	err := a.r.UpsertIgRunner(runner)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -282,21 +319,18 @@ func (a *Api) updateIGScrape(c echo.Context) error {
 func (a *Api) deleteIGScrape(c echo.Context) error {
 	p := new(CurrentRunners)
 	if err := c.Bind(p); err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
 	// delete runner
 	err := a.r.DeleteIgRunner(p.UserID, p.MapID)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	// delete the map
 	err = a.r.DeleteIgMapper(p.MapID)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -310,6 +344,7 @@ func (a *Api) getCurrentScrapeEvents(c echo.Context) error {
 	// need runners by id and enabled
 	runners, err := a.r.GetRunnersByID(id)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -322,6 +357,7 @@ func (a *Api) getCurrentScrapeEvents(c echo.Context) error {
 	// get enabled maps
 	maps, err := a.r.GetEventMappersByMapID(mapIDs)
 	if err != nil {
+		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 
@@ -349,6 +385,7 @@ func (a *Api) getCurrentScrapeEvents(c echo.Context) error {
 }
 
 func (a *Api) scrapeBuilder(c echo.Context) error {
+	fmt.Println("Building an event scrape")
 	p := new(repo.ScrapeBuilder)
 	if err := c.Bind(p); err != nil {
 		fmt.Println(err)
@@ -389,7 +426,7 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 		VenueAddressSelector:     fmt.Sprint(p.VenueAddress),
 		VenueContactInfoSelector: fmt.Sprint(p.VenueContactInfo),
 		TicketCostSelector:       fmt.Sprint(p.TicketCost),
-		TicketURLSelector:        fmt.Sprint(p.TicketURL),
+		TicketURLSelector:        fmt.Sprint(p.TicketURLS),
 		OtherPerformersSelector:  fmt.Sprint(p.OtherPerformers),
 		AgeRequiredSelector:      fmt.Sprint(p.AgeRequired),
 		FacebookURLSelector:      fmt.Sprint(p.FacebookURL),
@@ -398,14 +435,14 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 		Cbsa:                     p.Cbsa,
 		StateFips:                p.StateFips,
 		CountyFips:               p.CountyFips,
-		// ImagesSelector:           []string{p.Images.ClassName},
+		ImagesSelector:           []string{fmt.Sprint(p.Images)},
 	}
 
-	// save mapper to db
-	err = a.r.SaveEventMapper(m)
+	// upsert and return the upserted map
+	m, err = a.r.UpsertEventMapper(m)
 	if err != nil {
 		fmt.Println(err)
-		return c.JSON(http.StatusInternalServerError, nil)
+		return c.JSON(http.StatusInternalServerError, err)
 	}
 
 	// Add runner
@@ -422,7 +459,7 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 	}
 
 	// scrape the first event found
-	events := a.sc.ScrapeEvent(m)
+	events := a.sc.ScrapeEvent(m, true)
 	if len(events) == 0 {
 		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
@@ -438,24 +475,60 @@ func (a *Api) scrapeBuilder(c echo.Context) error {
 		Event:      events[0],
 		EventCount: len(events),
 	}
+
+	fmt.Println("Event scrape complete")
 	// we need to have user approve the first scraped event
 	// send back first event to user for approval
 	return c.JSON(http.StatusOK, e)
 }
 
 func (a *Api) verified(c echo.Context) error {
+	fmt.Println("Verifying event")
 	enabled := new(repo.Enabled)
 	err := c.Bind(enabled)
 	if err != nil {
 		return err
 	}
-	var str1 = "Enable was set to "
-	str2 := strconv.FormatBool(enabled.Enabled)
 
-	log.Printf("%s %s ", str1, str2)
-	out := fmt.Sprintf("%s %s ", str1, str2)
+	if !enabled.Enabled {
+		// remove the associated map, runner, and events
+		err = a.r.DeleteEventMapper(enabled.MapID.String())
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err)
+		}
 
-	return c.JSON(http.StatusOK, out)
+		err = a.r.DeleteRunner(enabled.UserID, enabled.MapID.String())
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err)
+		}
+
+		err = a.r.DeleteEvents(enabled.MapID.String())
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err)
+		}
+	} else {
+		// update the runner to enabled
+		err = a.r.UpdateRunner(enabled.UserID, enabled.MapID, true)
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err)
+		}
+
+		// update mappper to enabled
+		err = a.r.UpdateEventMapper(enabled.MapID, true)
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err)
+		}
+
+	}
+
+	fmt.Printf("Event verified: %v", enabled.Enabled)
+
+	return c.JSON(http.StatusOK, enabled.Enabled)
 }
 
 func mapFrequency(frequency string) int {
@@ -493,7 +566,6 @@ func unmapFrequency(frequency int) string {
 func (a *Api) scrapeInstagram(c echo.Context) error {
 	s := new(repo.IgMapBuilder)
 	if err := c.Bind(s); err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -507,7 +579,6 @@ func (a *Api) scrapeInstagram(c echo.Context) error {
 
 	err := a.r.SaveIgMapper(m)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
@@ -522,17 +593,15 @@ func (a *Api) scrapeInstagram(c echo.Context) error {
 	// save runner
 	err = a.r.UpsertIgRunner(runner)
 	if err != nil {
-		fmt.Println(err)
 		return c.JSON(http.StatusInternalServerError, nil)
 	}
 
-	return c.JSON(http.StatusOK, "its done")
+	return c.JSON(http.StatusOK, true)
 }
 
 func (a *Api) saveUrlSelection(c echo.Context) error {
 	p := new(repo.Message)
 	if err := c.Bind(p); err != nil {
-		fmt.Println(err)
 		return err
 	}
 	log.Println(p)

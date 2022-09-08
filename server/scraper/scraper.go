@@ -21,7 +21,7 @@ func NewScraper() *Scraper {
 	}
 }
 
-func (s *Scraper) ScrapeEvent(eventMap *repo.EventMapper) []*repo.Event {
+func (s *Scraper) ScrapeEvent(eventMap *repo.EventMapper, single bool) []*repo.Event {
 	events := []*repo.Event{}
 	s.collector.OnScraped(func(r *colly.Response) {
 		fmt.Println("Scraped", r.Request.URL)
@@ -33,7 +33,6 @@ func (s *Scraper) ScrapeEvent(eventMap *repo.EventMapper) []*repo.Event {
 		// clear the collector and visit the venue event page
 		s.collector.OnHTMLDetach(eventMap.FullEventSelector)
 		// remove last . separated part of the selector
-
 		s.collector.OnHTML(eventMap.FullEventSelector, func(e *colly.HTMLElement) {
 			evt := &repo.Event{}
 			evt.ID = uuid.New().String()
@@ -48,7 +47,8 @@ func (s *Scraper) ScrapeEvent(eventMap *repo.EventMapper) []*repo.Event {
 		})
 
 		if err := s.collector.Visit(parseWebsite(eventMap.VenueBaseURL, true)); err != nil {
-			fmt.Println(err)
+			// we dont need to print the error here because the collector will print it
+			// fmt.Println(err)
 		}
 
 		if len(events) <= 1 {
@@ -141,14 +141,14 @@ func mapEvents(e *colly.HTMLElement, mapper *repo.EventMapper, evt *repo.Event) 
 	// get the images
 	for _, imgSelector := range mapper.ImagesSelector {
 		e.ForEach(imgSelector, func(_ int, el *colly.HTMLElement) {
-			evt.Images = append(evt.Images, el.ChildAttr("img", "src"))
+			evt.Images = append(evt.Images, el.Attr("src"))
 		})
 	}
 
 	// get the event description URL
 	e.ForEach(mapper.DescriptionURLSelector, func(_ int, el *colly.HTMLElement) {
-		evt.DescriptionURL = el.ChildAttr("a", "href")
-		evt.URL = evt.DescriptionURL
+		evt.DescriptionURL = el.Attr("href")
+		// evt.URL = evt.DescriptionURL
 	})
 
 	// get the event description

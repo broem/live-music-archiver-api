@@ -17,7 +17,7 @@ type ScrapeBuilder struct {
 	EndDate          ScrapeBuilderContents `json:"endDate"`
 	DoorTime         ScrapeBuilderContents `json:"doorTime"`
 	TicketCost       ScrapeBuilderContents `json:"ticketCost"`
-	TicketURL        ScrapeBuilderContents `json:"ticketURLS"`
+	TicketURLS        ScrapeBuilderContents `json:"ticketURLS"`
 	OtherPerformers  ScrapeBuilderContents `json:"otherPerformers"`
 	EventURLS        ScrapeBuilderContents `json:"eventURLS"`
 	AgeRequired      ScrapeBuilderContents `json:"ageRequired"`

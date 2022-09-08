@@ -28,7 +28,7 @@ func (r *Runner) Run() {
 				mapRun, _ := r.Repo.GetEventMapperByID(runner.MapID.String())
 				// // run the scraper
 				scraper := scraper.NewScraper()
-				scraper.ScrapeEvent(mapRun)
+				scraper.ScrapeEvent(mapRun, false)
 				// // update the last run time
 				runner.LastRun = time.Now()
 				r.Repo.UpsertRunner(runner)

@@ -15,7 +15,7 @@ type IgMapBuilder struct {
 
 type IgMapper struct {
 	tableName  struct{}  `pg:"ig_mappers"`
-	MapID      uuid.UUID `json:"map_id" pg:"map_id,pk"`
+	MapID      uuid.UUID `json:"map_id" pg:",pk,type:uuid"`
 	UserID     string    `json:"user_id"`
 	UserEmail  string    `json:"user_email"`
 	IgUserName string    `json:"ig_user_name"`
@@ -24,7 +24,7 @@ type IgMapper struct {
 
 type IgRunner struct {
 	tableName struct{}  `pg:"ig_runners"`
-	MapID     uuid.UUID `json:"map_id" pg:"map_id,pk"`
+	MapID     uuid.UUID `json:"map_id" pg:"map_id,pk,type:uuid"`
 	UserID    string    `json:"user_id" pg:"user_id,pk"`
 	Chron     int       `json:"chron"`
 	LastRun   time.Time `json:"last_run"`
@@ -33,9 +33,15 @@ type IgRunner struct {
 
 type IgCaptured struct {
 	tableName         struct{}  `pg:"ig_captured"`
-	MapID             uuid.UUID `json:"map_id"`
-	UserID            string    `json:"user_id"`
+	MapID             uuid.UUID `json:"map_id" pg:",pk,type:uuid"`
+	UserID            string    `json:"user_id" pg:",pk"`
 	CaptureDate       time.Time `json:"capture_date"`
 	IgUsername        string    `json:"ig_username"`
 	RawScrapedPayload string    `json:"raw_scraped_payload"`
 }
+
+// CapturedStringSlice returns a slice of strings from the RawScrapedPayload
+func (i *IgCaptured) CapturedString() string {
+	return "Follower: " + i.IgUsername + " Captured: " + i.CaptureDate.String() + " Payload: " + i.RawScrapedPayload + "\n"
+}
+

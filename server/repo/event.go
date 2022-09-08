@@ -9,7 +9,7 @@ import (
 type Event struct {
 	tableName        struct{}  `pg:"captured"`
 	UserID           string    `json:"user_id"`
-	ID               string    `json:"eventID" pg:"captured_id,pk"`
+	ID               string    `json:"eventID" pg:"captured_id,pk,type:uuid"`
 	Title            string    `json:"eventTitle"`
 	DescriptionURL   string    `json:"eventDescURL"`
 	Description      string    `json:"eventDesc"`
@@ -28,17 +28,17 @@ type Event struct {
 	Misc             string    `json:"eventMisc"`
 	Images           []string  `json:"eventImages"`
 	CaptureDate      time.Time `json:"captureDate"`
-	MapID            uuid.UUID `json:"mapId"`
-	Cbsa			 string    `json:"cbsa"`
-	StateFips		 string    `json:"stateFips"`
-	CountyFips		 string    `json:"countyFips"`
+	MapID            uuid.UUID `json:"mapId" pg:"type:uuid"`
+	Cbsa             string    `json:"cbsa"`
+	StateFips        string    `json:"stateFips"`
+	CountyFips       string    `json:"countyFips"`
 }
 
 // Event to string
 func (e Event) String() string {
 	// returns all fields comma separated
 	ret := e.UserID + "," + e.ID + "," + e.Title + "," + e.DescriptionURL + "," + e.Description + "," + e.URL + "," + e.Date + "," + e.Time + "," + e.Venue + "," + e.VenueAddress + "," + e.VenueContactInfo + "," + e.TicketCost + "," + e.TicketURL + "," + e.OtherPerformers + "," + e.AgeRequired + "," + e.FacebookURL + "," + e.TwitterURL + "," + e.Misc + "," + e.CaptureDate.String()
-	
+
 	// remove commas next to each other
 	// ret = strings.ReplaceAll(ret, ",,", ",")
 	return ret
@@ -56,7 +56,7 @@ type EventWithCount struct {
 
 type EventMapper struct {
 	tableName                struct{}  `pg:"mappers"`
-	MapID                    uuid.UUID `json:"map_id" pg:"map_id,pk"`
+	MapID                    uuid.UUID `json:"map_id" pg:"type:uuid,pk"`
 	VenueBaseURL             string    `json:"venue_base_url"`
 	FullEventSelector        string    `json:"full_event"`
 	UserID                   string    `json:"user_id"`
@@ -83,5 +83,7 @@ type EventMapper struct {
 }
 
 type Enabled struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool      `json:"enabled"`
+	MapID   uuid.UUID `json:"mapId"`
+	UserID  string    `json:"userId"`
 }

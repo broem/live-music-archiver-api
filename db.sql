@@ -1,25 +1,25 @@
--- DROP SCHEMA "event";
+-- DROP SCHEMA event;
 
-CREATE SCHEMA "event" AUTHORIZATION postgres;
+CREATE SCHEMA event AUTHORIZATION postgres;
 
--- "event".builders definition
+-- builders definition
 
 -- Drop table
 
--- DROP TABLE "event".builders;
+-- DROP TABLE builders;
 
-CREATE TABLE "event".builders (
+CREATE TABLE builders (
 	builder_map jsonb NULL,
 	user_id varchar NOT NULL
 );
 
--- "event".captured definition
+-- captured definition
 
 -- Drop table
 
--- DROP TABLE "event".captured;
+-- DROP TABLE captured;
 
-CREATE TABLE "event".captured (
+CREATE TABLE captured (
 	user_id varchar NULL,
 	map_id uuid NULL,
 	title varchar NULL,
@@ -48,13 +48,13 @@ CREATE TABLE "event".captured (
 	county_fips varchar NULL,
 	CONSTRAINT captured_pk PRIMARY KEY (captured_id)
 );
--- "event".mappers definition
+-- mappers definition
 
 -- Drop table
 
--- DROP TABLE "event".mappers;
+-- DROP TABLE mappers;
 
-CREATE TABLE "event".mappers (
+CREATE TABLE mappers (
 	map_id uuid NOT NULL,
 	title_selector varchar NULL,
 	description_selector varchar NULL,
@@ -82,13 +82,13 @@ CREATE TABLE "event".mappers (
 	county_fips varchar NULL,
 	CONSTRAINT mapper_pk PRIMARY KEY (map_id)
 );
--- "event".runner definition
+-- runners definition
 
 -- Drop table
 
--- DROP TABLE "event".runner;
+-- DROP TABLE runners;
 
-CREATE TABLE "event".runner (
+CREATE TABLE runners (
 	map_id uuid NOT NULL,
 	user_id varchar NOT NULL,
 	chron numeric NULL,
@@ -98,13 +98,13 @@ CREATE TABLE "event".runner (
 	CONSTRAINT runner_pk PRIMARY KEY (map_id, user_id)
 );
 
--- "event".users definition
+-- users definition
 
 -- Drop table
 
--- DROP TABLE "event".users;
+-- DROP TABLE users;
 
-CREATE TABLE "event".users (
+CREATE TABLE users (
 	user_id varchar NOT NULL,
 	email varchar NULL,
 	install_date timestamptz NULL,
@@ -115,13 +115,13 @@ CREATE TABLE "event".users (
 );
 
 
--- "event".ig_mappers definition
+-- ig_mappers definition
 
 -- Drop table
 
--- DROP TABLE "event".ig_mappers;
+-- DROP TABLE ig_mappers;
 
-CREATE TABLE "event".ig_mappers (
+CREATE TABLE ig_mappers (
 	map_id uuid NOT NULL,
 	user_id varchar NULL,
 	user_email varchar NULL,
@@ -129,13 +129,13 @@ CREATE TABLE "event".ig_mappers (
 );
 
 
--- "event".ig_runners definition
+-- ig_runners definition
 
 -- Drop table
 
--- DROP TABLE "event".ig_runners;
+-- DROP TABLE ig_runners;
 
-CREATE TABLE "event".ig_runners (
+CREATE TABLE ig_runners (
 	map_id uuid NOT NULL,
 	user_id varchar NOT NULL,
 	chron numeric NULL,
@@ -145,13 +145,13 @@ CREATE TABLE "event".ig_runners (
 );
 
 
--- "event".ig_captured definition
+-- ig_captured definition
 
 -- Drop table
 
--- DROP TABLE "event".ig_captured;
+-- DROP TABLE ig_captured;
 
-CREATE TABLE "event".ig_captured (
+CREATE TABLE ig_captured (
 	map_id uuid NOT NULL,
 	user_id varchar NULL,
 	capture_date timestamptz NULL,

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-pg/pg/v10"
+	"github.com/go-pg/pg/v10/orm"
 	"github.com/google/uuid"
 )
 
@@ -29,14 +30,6 @@ func NewRepo(cfg Config) (*Repository, error) {
 		// TLSConfig:             &tls.Config{},
 		PoolSize: cfg.Pool,
 	})
-
-	// set shema to be event
-	db.Exec("SET search_path TO event")
-
-	// check connection
-	if _, err := db.Exec("SELECT 1"); err != nil {
-		return nil, err
-	}
 
 	return &Repository{
 		db: db,
@@ -69,6 +62,19 @@ func (r *Repository) AddUser(user *User) error {
 // UpsertRunner upserts a runner to the database
 func (r *Repository) UpsertRunner(runner *Runner) error {
 	_, err := r.db.Model(runner).OnConflict("(user_id, map_id) DO UPDATE").Insert()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateRunner updates a runner by user_id and map_id with enabled
+func (r *Repository) UpdateRunner(userID string, mapID uuid.UUID, enabled bool) error {
+	_, err := r.db.Model(&Runner{
+		UserID: userID,
+		MapID:  mapID,
+	}).Where("user_id = ? AND map_id = ?", userID, mapID).Set("enabled = ?", enabled).Update()
 	if err != nil {
 		return err
 	}
@@ -146,6 +152,53 @@ func (r *Repository) SaveScrapeBuilder(s *ScrapeBuilder) error {
 	return nil
 }
 
+// EventMapperExists checks if a event mapper exists using userId and venueBaseURL
+func (r *Repository) EventMapperExists(userID, venueBaseURL string) (bool, error) {
+	count, err := r.db.Model(&EventMapper{}).Where("user_id = ? AND venue_base_url = ?", userID, venueBaseURL).Count()
+	if err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// UpsertEventMapper upserts a event mapper to the database
+func (r *Repository) UpsertEventMapper(m *EventMapper) (*EventMapper, error) {
+	mapper := new(EventMapper)
+	// check if event mapper exists
+	exists, err := r.EventMapperExists(m.UserID, m.VenueBaseURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		_, err = r.db.Model(m).Where("user_id = ? AND venue_base_url = ?", m.UserID, m.VenueBaseURL).Update()
+		if err != nil {
+			return nil, err
+		}
+
+		// select the updated mapper
+		err = r.db.Model(mapper).Where("user_id = ? AND venue_base_url = ?", m.UserID, m.VenueBaseURL).Select()
+		if err != nil {
+			return nil, err
+		}
+
+		return mapper, nil
+	} else {
+		_, err = r.db.Model(m).Insert()
+		if err != nil {
+			return nil, err
+		}
+
+		return m, nil
+	}
+}
+
+
 func (r *Repository) SaveEventMapper(m *EventMapper) error {
 	// assure we have a map ID
 	if len(m.MapID) == 0 {
@@ -165,6 +218,18 @@ func (r *Repository) DeleteEventMapper(mapID string) error {
 	_, err := r.db.Model(&EventMapper{
 		MapID: uuid.MustParse(mapID),
 	}).Where("map_id = ?", mapID).Delete()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateEventMapper updates a event mapper by map_id to approved
+func (r *Repository) UpdateEventMapper(mapID uuid.UUID, enabled bool) error {
+	_, err := r.db.Model(&EventMapper{
+		MapID: mapID,
+	}).Where("map_id = ?", mapID).Set("approved = ?", enabled).Update()
 	if err != nil {
 		return err
 	}
@@ -194,6 +259,18 @@ func (r *Repository) GetEventsByID(userID string) ([]*Event, error) {
 	return events, nil
 }
 
+// DeleteEvents deletes events by map_id
+func (r *Repository) DeleteEvents(mapID string) error {
+	_, err := r.db.Model(&Event{
+		MapID: uuid.MustParse(mapID),
+	}).Where("map_id = ?", mapID).Delete()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Repository) GetScrapeBuilders(userID string) ([]*ScrapeBuilder, error) {
 	var builders []*ScrapeBuilder
 	err := r.db.Model(&builders).Where("user_id = ?", userID).Select()
@@ -218,7 +295,7 @@ func (r *Repository) GetEventMapper(userID, venueBaseURL string) (*EventMapper, 
 // GetEventMappers returns all EventMappers for a given user_id
 func (r *Repository) GetEventMappers(userID string) ([]*EventMapper, error) {
 	var mappers []*EventMapper
-	err := r.db.Model(&mappers).Where("user_id = ?", userID).Select()
+	err := r.db.Model(&mappers).Where("user_id = ? AND approved = true", userID).Select()
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +306,7 @@ func (r *Repository) GetEventMappers(userID string) ([]*EventMapper, error) {
 // GetEventMapperByID returns the EventMapper for a given map_id
 func (r *Repository) GetEventMapperByID(mapID string) (*EventMapper, error) {
 	var mapper EventMapper
-	err := r.db.Model(&mapper).Where("map_id = ?", mapID).Select()
+	err := r.db.Model(&mapper).Where("map_id = ? AND approved = true", mapID).Select()
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +323,17 @@ func (r *Repository) GetEventMappersByMapID(mapIDs []string) ([]*EventMapper, er
 	}
 
 	return mappers, nil
+}
+
+// GetIgCapturedByUserID returns all IgCaptured for a given user_id
+func (r *Repository) GetIgCapturedByUserID(userID string) ([]*IgCaptured, error) {
+	var captures []*IgCaptured
+	err := r.db.Model(&captures).Where("user_id = ?", userID).Select()
+	if err != nil {
+		return nil, err
+	}
+
+	return captures, nil
 }
 
 // SaveIgMap saves an IgMapper to the database
@@ -344,8 +432,33 @@ func (r *Repository) DeleteIgRunner(userID, mapID string) error {
 // SaveIgCaptured saves an IgCaptured to the database
 func (r *Repository) SaveIgCaptured(c *IgCaptured) error {
 	_, err := r.db.Model(c).Insert()
-	if err != nil {
+	if err != nil {	
 		return err
+	}
+
+	return nil
+}
+
+// createTables creates all tables in the database
+func (r *Repository) CreateTables() error {
+	models := []interface{}{
+		(*User)(nil),
+		(*Builder)(nil),
+		(*EventMapper)(nil),
+		(*Event)(nil),
+		(*Runner)(nil),
+		(*IgMapper)(nil),
+		(*IgRunner)(nil),
+		(*IgCaptured)(nil),
+	}
+
+	for _, model := range models {
+		err := r.db.Model(model).CreateTable(&orm.CreateTableOptions{
+			IfNotExists: true,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
